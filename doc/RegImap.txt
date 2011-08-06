@@ -1,0 +1,339 @@
+*RegImap.txt*  Plugin for using regular expression substitutes in insert mode
+
+RegImap                                                     *RegImap-contents*
+Last Change: Aug 6, 2011
+
+|RegImap-usage|       Usage
+|RegImap-commands|    Commands
+|RegImap-variables|   Variables
+|RegImap-options|     Options
+|RegImap-patterns|    Patterns
+|RegImap-features|    Features
+|RegImap-contact|     Contact
+
+For Vim version 7.0 or later.
+This plugin only works if 'compatible' is not set.
+{Vi does not have any of these features.}
+
+
+==============================================================================
+USAGE                                                         *RegImap-usage*
+
+RegImap plugin allows you to type text more efficiently by defining your
+mappings, that will be used, while you typing text. For example, in vim you
+often type nnoremap. To speed up this job, you can define the following
+mapping:
+>
+ call RegImap('^nno', 'nnoremap ', {'filetype' : 'vim'})
+<
+
+First argument is a {pattern}, that defines when the substitute will done.
+Second argument is a {substitute} pattern, that will be inserted instead of
+the {pattern}. Third argument defines filetype, when this substitute will
+work. Now you need to type only three characters at the start of the line to
+get full word and a space. Note that this substitute will not performed in any
+other place of the text.
+
+But, for example, you have to type also inoremap, vnoremap and others. Of
+course, you can call separate |RegImap| function for each word, but there is
+more efficient way:
+>
+ call RegImap('^\([nisxvolc]\)no', '\1noremap ', {'filetype' : 'vim'})
+<
+
+Now, regular expression is used for the first argument. Only one character out
+of "nisxvolc" will match, and it is passed to the second argument.
+
+More formally, |RegImap| works like executing s/{pattern}/{substitute}/ every
+time you enter a character or move the cursor in insert mode.
+
+In your {substitute} pattern you can use |PlaceHolders|. They are defined be |PH|. 
+You can jump to the next placeholder by pressing <tab> button, or cicle
+through available |PlaceHolders| by <S-Tab>. Look at |RegImap-options| fom
+more detailes.
+
+New patterns are defined by |RegImap| function. You can use it directly at you
+vim file at ftplugin directory. More convinent way is to keep them all at the
+RegImap folder with names ft.vim for filetype ft. They are automatically
+sourced, when you enter a buffer.
+
+If, when you typed a key in insert mode multiple {pattern}'s match, the one
+that was defined first will be used.
+
+Look at |RegImap-patterns| for more examples.
+
+
+==============================================================================
+COMMANDS                                                   *RegImap-commands*
+
+                                                                    *RegImap*
+RegImap({pattern}, {substitute}, [, {parameters}])
+
+RegImap adds a new regular mapping. Essentially RegImap defines a |CursorMovedI|
+autocommand that performs substitute 's/{pattern}/{substitute}/' in the insert
+mode at the cursor position. {pattern} and {substitute} are regular
+expressions. You can use there |RegImap-variables| and |PlaceHolder|. Simple
+example:
+>
+ call RegImap('^\s\+r ', 'return ')
+<
+
+Every time you typing 'r' and <space> at the start of the line you will
+automatically get 'return '.
+
+You can also use vim script in {substitute} field, see |sub-replace-expression|.
+For example:
+>
+ call RegImap('\<cdate', '\=strftime("%Y-%m-%d")')
+<
+
+{parameters} are additional options in the form
+>
+ {'option1' : value1, 'option2' : value2, ... }
+<
+
+Possible options are:
+  - {filetype}, default 'common'. Mapping will work only in specified
+    filetype. 'common' means that this pattern will work in all files.
+  - {condition}, default ''. Additional pattern that is checked before 
+    {pattern}. If it is not sutisfied, substitute is not performed. Added for
+    efficiency, when using complex or multiline {pattern}.
+  - {feedkeys}, default ''. Keys, that are send to vim after successfull
+    substitute. Default values of these parameters can be changed by
+    |RegImap-SetParameters|.
+
+Note If {pattern} does not contain atom '\%#' (matches at cursor position),
+     then it is added to the end. If {substitute} does not contain
+     |PlaceHolder| calls, one |PlaceHolder| is added to the end.
+
+After substitute 's/{pattern}/{substitute}/' is done, cursor is moved to the
+next |PlaceHolder|.
+
+After that |feedkeys| is called fith {feedkeys} argument.
+
+
+SetParameters([{parameters}])                         *RegImap-SetParameters*
+
+With this function you can change default values of {parameters}, specified in
+|RegImap|. If you call it without arguments, {parameters} are reset to
+defaults.
+
+
+PH([{string}])                           *PlaceHolder*   *RegImap-PlaceHolders*
+
+Return a Placeholder with possible default value after placeholder selection.
+Basicall for {substitute} fields.
+
+
+ReadRegImaps()                                         *RegImap-ReadRegImaps*
+
+Sourses .vim files from directories, specified by |RegImap-basedir|. This files
+usually contain vim scripts, |RegImap| calls.
+
+
+==============================================================================
+VARIABLES                                                 *RegImap-variables*
+
+Usefull variables to use in {pattern} fields.
+
+>
+ -----------------------------------------------------------------------------
+ | variable         | value       | matches                                  |
+ -----------------------------------------------------------------------------
+ | whiteStart       | ^\(\s*\)\zs | spaces of tabs at the start of the line, |
+ |                  |             | they are not includet into the match     |
+ |                  |             | (see h \zs). You can access them via \1  |
+ | cursor           | \%#         | cursor position                          |
+ | notDQ            | *           | not double quote character               |
+ | DQstr            | *           | double quoted string                     |
+ | notSQ            | "[^']"      | not a single quote                       |
+ | SQstr            | *           | Single quoted string                     |
+ | notSQDQ          | "[^\"']"    | not any quote                            |
+ | closedQuotedText | *           | arbitrary number of single or double     |
+ |                  |             | quoted strings or usual text             |
+ -----------------------------------------------------------------------------
+
+ * = look at RegMap.vim
+<
+
+==============================================================================
+OPTIONS                                                     *RegImap-options*
+
+You can change values of this variables in your .vimrc file.
+
+                                                            *RegImap-basedir*  >
+  let g:baseDir = &runtimepath
+<
+
+Mappings are by default looked for any RegImap directory in your
+'runtimepath'. Typically, it is located at '~/.vim/RegImap/' on *nix or
+'$HOME\vimfiles\RegImap\' on Windows. To change that location or add another
+one, change the g:baseDir variable in your |.vimrc| to your preferred
+directory. This will be used by the |globpath()| function, and so accepts the
+same syntax as it (e.g., comma-separated paths).
+
+                                                          *RegImap-useNextPH*  >
+  let useNextPH = '<Tab>'
+<
+
+If *popupmenu-completion* is visible (it is patterned by <C-X>, omni
+complition or other), then <C-E> key is send, leading to selection of
+current item. Else cursor is moved to the next |PlaceHolder|. It works in
+insert, normal or select modes. |PlaceHolder| is removed and if it has default
+value it is inserted.
+
+                                                       *RegImap-selectNextPH*  >
+  let selectNextPH = '<S-Tab>'
+<
+
+Move cursor to the next |PlaceHolder|, without expanding them. They are just
+selected, allowing you to delete it by pressing any key or using
+|RegImap-clearSelection| key. You also can expand it by pressing <Tab>. If
+there is no |PlaceHolder| in file, nothing happens.
+
+                                                     *RegImap-exitSelectMode*  >
+  let exitSelectMode = ';'
+<
+
+Key to exit from select mode to normal mode. Selected text is left unchanged.
+
+                                                  *RegImap-clearSelectedText*  >
+  let clearSelectedText = '<C-j>'
+<
+
+Key to clear selected text and go to insert mode. If it results in empty
+string, it is deleted.
+
+
+==============================================================================
+PATTERNS FOR SPECIFIC FILETYPES                            *RegImap-patterns*
+
+Here are described several mapping for different filetypes. You can find more
+in your |RegImap-baseDir| directory. All of them are for insert mode, cursor
+position is indicated by | character.
+
+
+VIM                                                             *RegImap-vim*
+
+If you are not inside string by typing semicolon you will exit insert mode.
+This is much more usefull than <Esc> of <C-[>.
+
+>
+ -----------------------------------------------------------------------------
+ | sample        | key | result              | comment                       |
+ -----------------------------------------------------------------------------
+ | let a = 2|    |  ;  | let a = 2|          | normal mode                   |
+ | let a = |     |  [  | let a = [|]         |                               |
+ | let a = '|    |  [  | let a = '[|         | don't work inside strings     |
+ | let a = |     |  {  | let a = {|}         |                               |
+ | let a = |     |  '  | let a = '|'         |                               |
+ | call cursor   |  '  | call cursor(|)      | after character you bet braces|
+ | '^\s*' . p|   |  h  | '^\s*' . PH(|)      |                               |
+ | i|            |  f  | if |                | at the empty line             |
+ |               |     |                     |                               |
+ |               |     | endif               |                               |
+ | if a:0 > 0|   |<tab>| if a:0 > 0          |                               |
+ |   <++>        |     |   |                 |                               |
+ | endif         |     | endif               |                               |
+ | fo|           |  r  | for | in <++>       | at the empty line             |
+ |               |     |   <++>              |                               |
+ |               |     | endfor              |                               |
+ | let v = [|]   |   | let v = [           |                               |
+ |               |     |        \|           |                               |
+ |               |     |        \]           |                               |
+ | imap cl|      |space| imap <C-l>|         | any character instead of l    |
+ | imap <C-l> r| |space| imap <C-l> <Right>| | also available <BS> <Down>    |
+ | imap f5|      |space| imap <F5>|          | <Esc> <Left> <Right> <Space>  |
+ |               |     |                     | <Tab> <Up>                    |
+ | r|            |space| call RegImap('|',   | at the start of the line      |
+ |               |     |    '<++>', '<++>')  |                               |
+ | r|            |space| return |            | inside function               |
+ | if a ma|      |space| if a =~ |           | also available nm eq ne le ge |
+ | get           |  l  | getline(|)          |                               |
+ | getline(|)    |  l  | getline(line('.'))  |                               |
+ -----------------------------------------------------------------------------
+<
+
+
+TEX                                                            *RegImap-tex*
+
+If you are not inside string by typing semicolon you will exit insert mode.
+
+>
+ -----------------------------------------------------------------------------
+ | sample        | key | result              | comment                       |
+ -----------------------------------------------------------------------------
+ | b|            |space| \begin{|}           | at the start of the line      |
+ |               |     |   <++>              |                               |
+ |               |     | \end{}              |                               |
+ | \begin{|}     |  e  | \begin{e|}          | begin and end fields are sin- |
+ |   E = mc^2    |     |   E = mc^2          | chronized even if you return  |
+ | \end{}        |     | \end{e}             | to them later                 |
+ | s|            |space| \section{|}         |                               |
+ | ss|           |space| \subsection{|}      |                               |
+ | |             |  [  | \[                  | at the start of the line      |
+ |               |     |   |                 |                               |
+ |               |     | \]                  |                               |
+ | |             |  {  | {                   | at the start of the line      |
+ |               |     |   |                 |                               |
+ |               |     | }                   |                               |
+ | \foo|         |  [  | \foo[|]             | not at the start of the line  |
+ | i             |space| \item |             | at the start of the line      |
+ | ith           |space| $i$--th |           |                               |
+ | jth           |space| $j$--th |           |                               |
+ -----------------------------------------------------------------------------
+<
+
+
+CPP                                                            *RegImap-cpp*
+
+By typing semicolon you will exit insert mode. If you are at the end of
+line semicolon is left in the text.
+
+>
+ -----------------------------------------------------------------------------
+ | sample        | key | result              | comment                       |
+ -----------------------------------------------------------------------------
+ | i|            |  f  | if(|)               | at the emply line             |
+ |               |     |     <++>            |                               |
+ | for|          |space| for | in <++>       | at the emply line             |
+ |               |     |   <++>              |                               |
+ |               |     | endfor              |                               |
+ | sw|           |space| switch(|)           |                               |
+ |               |     | {                   |                               |
+ |               |     |     <+case+>        |                               |
+ |               |     |     <+default: +>   |                               |
+ |               |     | }                   |                               |
+ | case 1: |     |<tab>| case 1:             | you can get substitute of     |
+ | <+case +>     |     | case |: <+code+>;   | your PlaceHolder, making      |
+ |               |     |         <+break;+>  | recursive substitutes         |
+ |               |     | <+case +>           |                               |
+ | |             |  [  | {                   | at the start of the line      |
+ |               |     |     |               |                               |
+ |               |     | }                   |                               |
+ | argc|         |  [  | args[|]             | not at the start of the line  |
+ -----------------------------------------------------------------------------
+<
+
+
+==============================================================================
+FEATURES                                                   *RegImap-features*
+
+RegImap plugin has the following features among others:
+  - The syntax of |RegImap| allows to use TextMate's or other snippets. But
+    maybe you will want to improve them with the power of regular expressions.
+  - Dinamic update of linked variables is possible by defining appropriate
+    mapping. See |for| loop for CPP and |begin-end| for TEX
+  - PlaceHolders within placeholders are possible, look at 'case ' pattern for
+    cpp.
+
+
+==============================================================================
+CONTACT                                      *RegImap-contact* *RegImap-author*
+
+If you have any suggestions, improvements or want to share with others your
+patterns, please email: artshcherbina <at> gmail <dot> com
+
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:

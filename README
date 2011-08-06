@@ -1,0 +1,67 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=3686
+
+RegImap plugin allows you to type text more efficiently by defining your
+mappings, that will be used, while you typing text. For example, in vim you
+often type nnoremap. To speed up this job, you can define the following
+mapping:
+
+ call RegImap('^nno', 'nnoremap ', {'filetype' : 'vim'})
+
+
+First argument is a {pattern}, that defines when the substitute will done.
+Second argument is a {substitute} pattern, that will be inserted instead of
+the {pattern}. Third argument defines filetype, when this substitute will
+work. Now you need to type only three characters at the start of the line to
+get full word and a space. Note that this substitute will not performed in any
+other place of the text.
+
+But, for example, you have to type also inoremap, vnoremap and others. Of
+course, you can call separate |RegImap| function for each word, but there is
+more efficient way:
+
+ call RegImap('^\([nisxvolc]\)no', '\1noremap ', {'filetype' : 'vim'})
+
+
+Now, regular expression is used for the first argument. Only one character out
+of "nisxvolc" will match, and it is passed to the second argument.
+
+More formally, |RegImap| works like executing :s/{pattern}/{substitute}/ every
+time you enter a character or move the cursor in insert mode.
+
+In your {substitute} pattern you can use PlaceHolders. They look like <++> or
+<+text+>. You can jump to the next placeholder by pressing <tab> button, or cycle
+through available PlaceHolders by <S-Tab>. 
+
+Example for cpp. When you type at the blank line sw and <space>, you will get
+
+switch(|)          
+{                  
+    <+case +>       
+    <+default: +>  
+}                  
+
+Cursor position is shown by |. When you type condition you can press <tab> to 
+define cases:
+
+switch(c)
+{                  
+    case |: <+code+>;  <+break;+> 
+    <+case +>       
+    <+default: +>  
+}                  
+
+As you see, first case PlaceHolder is expanded to case statement, and several other
+PlaceHolders. You can move to them by pressing <tab>. All this interactivity is 
+defined by next two calls:
+
+call RegImap('^\(\s*\)\zssw ', 'switch(' . PH() . ')^M\1{^M\1    ' . PH("case ") . '^M\1    ' . PH("default: ") . '^M\1}')
+call RegImap('^\(\s*\)case \zs', PH("value") . ': ' . PH("code") . '; ' . PH('break;') . '^M\1' . PH("case "))
+
+Here PH stand for PlaceHolder and ^M for a new line. Similarly, you can define
+your own patterns with arbitrary behavior.
+
+More detailed description is provided in the help file.
+
+If you have any suggestions, improvements or want to share with others your
+patterns, you can post them here http://github.com/artshcherbina/vim-RegImap
+or send them at my e-mail.
