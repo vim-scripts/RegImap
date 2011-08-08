@@ -1,12 +1,12 @@
-" File:          regImap.vim
+" File:          RegImap.vim
 " Author:        Artem Shcherbina
 " Last Updated:  Aug 6, 2011
 " Version:       0.5
-" Description:   regImap.vim  Plugin for using regular expression substitutes in insert mode
+" Description:   RegImap.vim  Plugin for using regular expression substitutes in insert mode
 "
-"                For more help see regImap.txt; you can do this by using:
+"                For more help see RegImap.txt; you can do this by using:
 "                :helptags ~/.vim/doc
-"                :h regImap.txt
+"                :h RegImap.txt
 
 "plugin/RegImap.vim
 "doc/RegImap.txt
@@ -16,12 +16,11 @@
 "RegImap/tex.vim
 
 
-
-if exists("g:regImap_inited") || &cp || version < 700
+if exists("g:RegImap_inited") || &cp || version < 700
   finish
 endif
 
-let regImap_inited=1
+let RegImap_inited=1
 
 autocmd CursorMovedI * call TriggerRegImap()
 autocmd BufEnter * call ReadRegImaps()
@@ -79,7 +78,7 @@ function! CheckSelected()
 endfunction
 
 
-let s:regImaps = {}
+let s:RegImaps = {}
 let whiteStart='^\(\s*\)\zs'
 let cursor = '\' . '%#'
 let isPH = '<' . '+.*+>'
@@ -144,12 +143,12 @@ fun! RegImap(pattern, substitute, ...)
   endif
   
   for ft in split(parameters.filetype, '\.')
-    if !has_key(s:regImaps, ft)
-      let s:regImaps[ft] = []
+    if !has_key(s:RegImaps, ft)
+      let s:RegImaps[ft] = []
     endif
     let defined=0
-    for regImap in s:regImaps[ft]
-      if regImap.pattern == pattern
+    for RegImap in s:RegImaps[ft]
+      if RegImap.pattern == pattern
         echohl WarningMsg
         echomsg 'RegImap: Redefining ' . a:pattern . ' for ' . ft
         echohl None
@@ -158,16 +157,16 @@ fun! RegImap(pattern, substitute, ...)
     endfor
     if !defined
       " Singleline if not \n
-      call add(s:regImaps[ft], extend({'pattern' : pattern, 'substitute' : substitute, 'singleLine' : (pattern !~ '\\n')}, parameters))
+      call add(s:RegImaps[ft], extend({'pattern' : pattern, 'substitute' : substitute, 'singleLine' : (pattern !~ '\\n')}, parameters))
     endif
   endfor
 endfun
 
 fun! ReadRegImaps()
-  let s:regImaps = {}
+  let s:RegImaps = {}
   
-  for regImapsFile in split(globpath(g:baseDir, 'regImap/common.vim')) + split(globpath(&rtp, 'regImap/' . &ft . '.vim'))
-    exec 'normal! :so ' . regImapsFile . ''
+  for RegImapsFile in split(globpath(g:baseDir, 'RegImap/common.vim')) + split(globpath(&rtp, 'RegImap/' . &ft . '.vim'))
+    exec 'normal! :so ' . RegImapsFile . ''
   endfor
 endf
 
@@ -208,26 +207,26 @@ endfunction
 
 fun! TriggerRegImap(...)
   for ft in split(&ft, '\.') + ['common']
-    if exists('s:regImaps["'.ft.'"]')
-      for regImap in s:regImaps[ft]
-        if regImap.singleLine
+    if exists('s:RegImaps["'.ft.'"]')
+      for RegImap in s:RegImaps[ft]
+        if RegImap.singleLine
           let lineNum = line('.')
-          if (regImap.condition == '' || search(regImap.condition, 'cnb', lineNum)) && search(regImap.pattern, 'cnb', lineNum)
-            exec 'normal! :s/' . regImap.pattern . '/' . regImap.substitute . "\<CR>"
+          if (RegImap.condition == '' || search(RegImap.condition, 'cnb', lineNum)) && search(RegImap.pattern, 'cnb', lineNum)
+            exec 'normal! :s/' . RegImap.pattern . '/' . RegImap.substitute . "\<CR>"
             " Put  defined in RegImap back
             s/?[c]r?//ge
             call setpos('.', [bufnr("%"), lineNum, 0, 0])
-            call NextPH(regImap.feedkeys)
+            call NextPH(RegImap.feedkeys)
             return ''
           endif
         else
           let lineNum = line('.')
-          if (regImap.condition == '' || search(regImap.condition, 'cnb')) && search(regImap.pattern, 'cnb')
-            exec 'normal! :%s/' . regImap.pattern . '/' . regImap.substitute . "\<CR>"
+          if (RegImap.condition == '' || search(RegImap.condition, 'cnb')) && search(RegImap.pattern, 'cnb')
+            exec 'normal! :%s/' . RegImap.pattern . '/' . RegImap.substitute . "\<CR>"
             " Put  defined in RegImap back
             %s/?[c]r?//ge
             call setpos('.', [bufnr("%"), lineNum, 0, 0])
-            call NextPH(regImap.feedkeys)
+            call NextPH(RegImap.feedkeys)
             return ''
           endif
         endif
@@ -240,10 +239,10 @@ endfun
 " For debug
 fun! PrintRegImaps()
   for ft in split(&ft, '\.') + ['common']
-    if exists('s:regImaps["'.ft.'"]')
+    if exists('s:RegImaps["'.ft.'"]')
       exec 'normal! o' . ft
-      for regImap in s:regImaps[ft]
-        exec 'normal! o' . regImap.pattern . ' -> ' . regImap.substitute . ' / ' . regImap.condition . ' / ' . regImap.feedkeys
+      for RegImap in s:RegImaps[ft]
+        exec 'normal! o' . RegImap.pattern . ' -> ' . RegImap.substitute . ' / ' . RegImap.condition . ' / ' . RegImap.feedkeys
       endfor
     endif
   endfor

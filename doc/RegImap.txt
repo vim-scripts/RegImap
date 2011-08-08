@@ -44,7 +44,7 @@ more efficient way:
 Now, regular expression is used for the first argument. Only one character out
 of "nisxvolc" will match, and it is passed to the second argument.
 
-More formally, |RegImap| works like executing s/{pattern}/{substitute}/ every
+More formally, |RegImap| works like executing :s/{pattern}/{substitute}/ every
 time you enter a character or move the cursor in insert mode.
 
 In your {substitute} pattern you can use |PlaceHolders|. They are defined be |PH|. 
@@ -331,8 +331,11 @@ RegImap plugin has the following features among others:
 ==============================================================================
 CONTACT                                      *RegImap-contact* *RegImap-author*
 
+Script homepage http://www.vim.org/scripts/script.php?script_id=3686
+
 If you have any suggestions, improvements or want to share with others your
-patterns, please email: artshcherbina <at> gmail <dot> com
+patterns, please post them here http://github.com/artshcherbina/vim-RegImap
+or send at my email: artshcherbina <at> gmail <dot> com
 
 
 ==============================================================================
