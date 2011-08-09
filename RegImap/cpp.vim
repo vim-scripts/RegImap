@@ -7,16 +7,23 @@ call RegImap('\<\l*F\zs', 'rame')
 call RegImap(';' .cursor . '\s*$', ';', {'feedkeys' : "\<Esc>"})
 call RegImap(';', '', {'feedkeys' : "\<Esc>"})
 
-call RegImap('^\s*\zsp\s', 'printf("' . PH() . '\\n");')
+call RegImap('^\s*\zsp\s', 'printf("' . PH('Done') . '\\n");')
+call RegImap('^\s*\zsP\s', 'Print(' . PH('') . ');')
 call RegImap('^\s*\zspi\s', 'printf("%i\\n", ' . PH() . ');')
 call RegImap('^\s*\zsps\s', 'printf("%s\\n", ' . PH() . ');')
 
 let whiteStartCommands = [
-      \['re', 'return '],
-      \['\(else\|}\)\s*if\zs', '(' . PH() . ')\1    ' . PH()],
-      \['el', 'else\1  ' . cursor],
-      \['for ', 'for ' . PH() . ' in ' . PH() . '\1  ' . PH() . '\1endfor']
-      \]
+      \['r ', 'return '],
+      \['\(else\|}\|\)\s*if\zs ', '(' . PH() . ')\1    ' . PH()],
+      \['e ', 'else\1    ' . PH()],
+      \['c ',  'const '],
+      \['d ',  'double '],
+      \['b ',  'bool '],
+      \['v ',  'void '],
+      \['i ',  'int '],
+      \['ci ', 'const int '],
+      \['const\s*\(int\|double\)\s*\(\w*\)\zs\w', '\U&']
+      \]                
 
 for key in whiteStartCommands
   call RegImap(whiteStart . key[0], key[1])

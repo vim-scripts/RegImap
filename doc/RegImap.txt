@@ -10,6 +10,7 @@ Last Change: Aug 6, 2011
 |RegImap-patterns|    Patterns
 |RegImap-features|    Features
 |RegImap-contact|     Contact
+|RegImap-changelog|   Changelog
 
 For Vim version 7.0 or later.
 This plugin only works if 'compatible' is not set.
@@ -50,10 +51,10 @@ time you enter a character or move the cursor in insert mode.
 In your {substitute} pattern you can use |PlaceHolders|. They are defined be |PH|. 
 You can jump to the next placeholder by pressing <tab> button, or cicle
 through available |PlaceHolders| by <S-Tab>. Look at |RegImap-options| fom
-more detailes.
+more details.
 
 New patterns are defined by |RegImap| function. You can use it directly at you
-vim file at ftplugin directory. More convinent way is to keep them all at the
+vim file at ftplugin directory. More convenient way is to keep them all at the
 RegImap folder with names ft.vim for filetype ft. They are automatically
 sourced, when you enter a buffer.
 
@@ -96,9 +97,9 @@ Possible options are:
   - {filetype}, default 'common'. Mapping will work only in specified
     filetype. 'common' means that this pattern will work in all files.
   - {condition}, default ''. Additional pattern that is checked before 
-    {pattern}. If it is not sutisfied, substitute is not performed. Added for
+    {pattern}. If it is not satisfied, substitute is not performed. Added for
     efficiency, when using complex or multiline {pattern}.
-  - {feedkeys}, default ''. Keys, that are send to vim after successfull
+  - {feedkeys}, default ''. Keys, that are send to vim after successful
     substitute. Default values of these parameters can be changed by
     |RegImap-SetParameters|.
 
@@ -109,7 +110,7 @@ Note If {pattern} does not contain atom '\%#' (matches at cursor position),
 After substitute 's/{pattern}/{substitute}/' is done, cursor is moved to the
 next |PlaceHolder|.
 
-After that |feedkeys| is called fith {feedkeys} argument.
+After that |feedkeys| is called with {feedkeys} argument.
 
 
 SetParameters([{parameters}])                         *RegImap-SetParameters*
@@ -122,26 +123,32 @@ defaults.
 PH([{string}])                           *PlaceHolder*   *RegImap-PlaceHolders*
 
 Return a Placeholder with possible default value after placeholder selection.
-Basicall for {substitute} fields.
+Basically for {substitute} fields.
 
 
 ReadRegImaps()                                         *RegImap-ReadRegImaps*
+Sources {filetype}.vim files from directories, specified by |RegImap_basedir|.
+This files usually contain vim scripts, |RegImap| calls. This function is
+called automatically when you enter a buffer.
 
-Sourses .vim files from directories, specified by |RegImap-basedir|. This files
-usually contain vim scripts, |RegImap| calls.
+
+ReloadRegImaps()                                     *RegImap-ReloadRegImaps*
+Cleares all defined mappings and sourced again all files, used before by
+|RegImap-ReadRegImaps|.
+
 
 
 ==============================================================================
 VARIABLES                                                 *RegImap-variables*
 
-Usefull variables to use in {pattern} fields.
+Useful variables to use in {pattern} fields.
 
 >
  -----------------------------------------------------------------------------
  | variable         | value       | matches                                  |
  -----------------------------------------------------------------------------
  | whiteStart       | ^\(\s*\)\zs | spaces of tabs at the start of the line, |
- |                  |             | they are not includet into the match     |
+ |                  |             | they are not included into the match     |
  |                  |             | (see h \zs). You can access them via \1  |
  | cursor           | \%#         | cursor position                          |
  | notDQ            | *           | not double quote character               |
@@ -161,8 +168,8 @@ OPTIONS                                                     *RegImap-options*
 
 You can change values of this variables in your .vimrc file.
 
-                                                            *RegImap-basedir*  >
-  let g:baseDir = &runtimepath
+                                                            *RegImap_basedir*  >
+  let g:RegImap_baseDir = &runtimepath
 <
 
 Mappings are by default looked for any RegImap directory in your
@@ -172,33 +179,33 @@ one, change the g:baseDir variable in your |.vimrc| to your preferred
 directory. This will be used by the |globpath()| function, and so accepts the
 same syntax as it (e.g., comma-separated paths).
 
-                                                          *RegImap-useNextPH*  >
-  let useNextPH = '<Tab>'
+                                                          *RegImap_useNextPH*  >
+  let g:RegImap_useNextPH = '<Tab>'
 <
 
 If *popupmenu-completion* is visible (it is patterned by <C-X>, omni
-complition or other), then <C-E> key is send, leading to selection of
+completion or other), then <C-E> key is send, leading to selection of
 current item. Else cursor is moved to the next |PlaceHolder|. It works in
 insert, normal or select modes. |PlaceHolder| is removed and if it has default
 value it is inserted.
 
-                                                       *RegImap-selectNextPH*  >
-  let selectNextPH = '<S-Tab>'
+                                                       *RegImap_selectNextPH*  >
+  let g:RegImap_selectNextPH = '<S-Tab>'
 <
 
 Move cursor to the next |PlaceHolder|, without expanding them. They are just
 selected, allowing you to delete it by pressing any key or using
-|RegImap-clearSelection| key. You also can expand it by pressing <Tab>. If
+|RegImap_clearSelection| key. You also can expand it by pressing <Tab>. If
 there is no |PlaceHolder| in file, nothing happens.
 
-                                                     *RegImap-exitSelectMode*  >
-  let exitSelectMode = ';'
+                                                     *RegImap_exitSelectMode*  >
+  let g:RegImap_exitSelectMode = ';'
 <
 
 Key to exit from select mode to normal mode. Selected text is left unchanged.
 
-                                                  *RegImap-clearSelectedText*  >
-  let clearSelectedText = '<C-j>'
+                                                  *RegImap_clearSelectedText*  >
+  let g:RegImap_clearSelectedText = '<C-j>'
 <
 
 Key to clear selected text and go to insert mode. If it results in empty
@@ -209,14 +216,14 @@ string, it is deleted.
 PATTERNS FOR SPECIFIC FILETYPES                            *RegImap-patterns*
 
 Here are described several mapping for different filetypes. You can find more
-in your |RegImap-baseDir| directory. All of them are for insert mode, cursor
+in your |RegImap_baseDir| directory. All of them are for insert mode, cursor
 position is indicated by | character.
 
 
 VIM                                                             *RegImap-vim*
 
 If you are not inside string by typing semicolon you will exit insert mode.
-This is much more usefull than <Esc> of <C-[>.
+This is much more useful than <Esc> of <C-[>.
 
 >
  -----------------------------------------------------------------------------
@@ -294,11 +301,8 @@ line semicolon is left in the text.
  -----------------------------------------------------------------------------
  | sample        | key | result              | comment                       |
  -----------------------------------------------------------------------------
- | i|            |  f  | if(|)               | at the emply line             |
+ | if|           |space| if(|)               | at the empty line             |
  |               |     |     <++>            |                               |
- | for|          |space| for | in <++>       | at the emply line             |
- |               |     |   <++>              |                               |
- |               |     | endfor              |                               |
  | sw|           |space| switch(|)           |                               |
  |               |     | {                   |                               |
  |               |     |     <+case+>        |                               |
@@ -322,8 +326,8 @@ FEATURES                                                   *RegImap-features*
 RegImap plugin has the following features among others:
   - The syntax of |RegImap| allows to use TextMate's or other snippets. But
     maybe you will want to improve them with the power of regular expressions.
-  - Dinamic update of linked variables is possible by defining appropriate
-    mapping. See |for| loop for CPP and |begin-end| for TEX
+  - Dynamic update of linked variables is possible by defining appropriate
+    mapping. See for loop for CPP and begin-end statemnts for TEX
   - PlaceHolders within placeholders are possible, look at 'case ' pattern for
     cpp.
 
@@ -337,6 +341,21 @@ If you have any suggestions, improvements or want to share with others your
 patterns, please post them here http://github.com/artshcherbina/vim-RegImap
 or send at my email: artshcherbina <at> gmail <dot> com
 
+
+==============================================================================
+CHANGELOG                                                *RegImap-changelog*
+
+0.52
+ - Fixed sourcing algorithm (thanks to Alexey Radkov)
+ - Added ReloadRegImaps function
+ - Added g:RegImap_ to settings names
+ - updated help
+
+0.51
+ - Fixed path detection 
+  
+0.5~
+ - First public version
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

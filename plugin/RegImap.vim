@@ -8,51 +8,55 @@
 "                :helptags ~/.vim/doc
 "                :h RegImap.txt
 
-"plugin/RegImap.vim
-"doc/RegImap.txt
-"RegImap/common.vim
-"RegImap/vim.vim
-"RegImap/cpp.vim
-"RegImap/tex.vim
-
-
 if exists("g:RegImap_inited") || &cp || version < 700
   finish
 endif
 
-let RegImap_inited=1
+let RegImap_inited = 1
 
 autocmd CursorMovedI * call TriggerRegImap()
 autocmd BufEnter * call ReadRegImaps()
+autocmd FileType * call ReadRegImaps()
 
-if !exists("g:baseDir")
-  let baseDir = &runtimepath
+if !exists("g:RegImap_baseDir")
+  let g:RegImap_baseDir = &runtimepath
 endif
 
-if !exists("g:useNextPH")
-  let useNextPH = '<Tab>'
+if !exists("g:RegImap_useNextPH")
+  let g:RegImap_useNextPH = '<Tab>'
 endif
 
-if !exists("g:selectNextPH")
-  let selectNextPH = '<S-Tab>'
+if !exists("g:RegImap_selectNextPH")
+  let g:RegImap_selectNextPH = '<S-Tab>'
 endif
 
-if !exists("g:exitSelectMode")
-  let exitSelectMode = ';'
+if !exists("g:RegImap_exitSelectMode")
+  let g:RegImap_exitSelectMode = ';'
 endif
 
-if !exists("g:clearSelectedText")
-  let clearSelectedText = '<C-j>'
+if !exists("g:RegImap_clearSelectedText")
+  let g:RegImap_clearSelectedText = '<C-j>'
 endif
 
-exec 'inoremap ' . useNextPH . ' <C-r>=NextPH()'
-exec 'nnoremap ' . useNextPH . ' a<C-r>=NextPH("") . Escape()'
-exec 'snoremap ' . useNextPH . ' <Esc>a<C-r>=CheckSelected()'
-exec 'nnoremap ' . selectNextPH . ' :call SelectPH()'
-exec 'snoremap ' . selectNextPH . ' <Esc>:call SelectPH()'
-exec 'inoremap ' . selectNextPH . ' <Esc>:call SelectPH()'
-exec 'snoremap ' . exitSelectMode . ' <Esc>'
-exec 'snoremap ' . clearSelectedText . ' i<BS><C-r>=ClearSelection()'
+if g:RegImap_useNextPH != ''
+  exec 'inoremap ' . g:RegImap_useNextPH . ' <C-r>=NextPH()'
+  exec 'nnoremap ' . g:RegImap_useNextPH . ' a<C-r>=NextPH("") . Escape()'
+  exec 'snoremap ' . g:RegImap_useNextPH . ' <Esc>a<C-r>=CheckSelected()'
+endif
+
+if g:RegImap_selectNextPH != ''
+  exec 'nnoremap ' . g:RegImap_selectNextPH . ' :call SelectPH()'
+  exec 'snoremap ' . g:RegImap_selectNextPH . ' <Esc>:call SelectPH()'
+  exec 'inoremap ' . g:RegImap_selectNextPH . ' <Esc>:call SelectPH()'
+endif
+
+if g:RegImap_exitSelectMode != ''
+  exec 'snoremap ' . g:RegImap_exitSelectMode . ' <Esc>'
+endif
+
+if g:RegImap_clearSelectedText != ''
+  exec 'snoremap ' . g:RegImap_clearSelectedText . ' i<BS><C-r>=ClearSelection()'
+endif
 
 function! Escape()
   return "\<Esc>"
@@ -78,7 +82,6 @@ function! CheckSelected()
 endfunction
 
 
-let s:RegImaps = {}
 let whiteStart='^\(\s*\)\zs'
 let cursor = '\' . '%#'
 let isPH = '<' . '+.*+>'
@@ -100,8 +103,10 @@ let defaults = {
       \'condition' : '',
       \'feedkeys' : '',
       \}
-
+      
 let parameters = defaults
+let s:sourcedFiles = {}
+let s:regImaps = {}
 
 function! SetParameters(...)
   if a:0 == 0
@@ -114,7 +119,7 @@ endfunction
 function! GetParameters(input)
   let parameters = extend(copy(g:parameters), a:input)
   if parameters.condition !~ g:cursor
-    let parameters.condition .= '\%#'
+    let parameters.condition = '\%(' . parameters.condition . '\)\%#'
   endif
   if parameters.filetype == ''
     let parameters.filetype = 'common'
@@ -128,14 +133,18 @@ fun! RegImap(pattern, substitute, ...)
     echomsg 'RegImap: Empty pattern for ' . a:ft
     echohl None
   endif
-  let pattern = a:pattern . (a:pattern =~ '\\%#' ? '' : '\%#')
+  if a:pattern !~ '\\%#'
+    let pattern = '\%(' . a:pattern . '\)\%#'
+  else
+    let pattern = a:pattern
+  endif
   
   " Replace  by special string
   let substitute = substitute(a:substitute, '', '?c' . 'r?', 'g')
   if (substitute[0:1] != '\=') && substitute !~ g:isPH
     let substitute .= PH()
   endif
-
+  
   if a:0 > 0
     let parameters = GetParameters(a:1)
   else
@@ -143,11 +152,11 @@ fun! RegImap(pattern, substitute, ...)
   endif
   
   for ft in split(parameters.filetype, '\.')
-    if !has_key(s:RegImaps, ft)
-      let s:RegImaps[ft] = []
+    if !has_key(s:regImaps, ft)
+      let s:regImaps[ft] = []
     endif
     let defined=0
-    for RegImap in s:RegImaps[ft]
+    for RegImap in s:regImaps[ft]
       if RegImap.pattern == pattern
         echohl WarningMsg
         echomsg 'RegImap: Redefining ' . a:pattern . ' for ' . ft
@@ -156,19 +165,37 @@ fun! RegImap(pattern, substitute, ...)
       endif
     endfor
     if !defined
-      " Singleline if not \n
-      call add(s:RegImaps[ft], extend({'pattern' : pattern, 'substitute' : substitute, 'singleLine' : (pattern !~ '\\n')}, parameters))
+      " singleline if not \n
+      call add(s:regImaps[ft], extend({'pattern' : pattern, 'substitute' : substitute, 'singleLine' : (pattern !~ '\\n')}, parameters))
     endif
   endfor
 endfun
 
 fun! ReadRegImaps()
-  let s:RegImaps = {}
-  
-  for RegImapsFile in split(globpath(g:baseDir, 'RegImap/common.vim')) + split(globpath(&rtp, 'RegImap/' . &ft . '.vim'))
-    exec 'normal! :so ' . RegImapsFile . ''
+  if &ft != ''
+    call ReadFile(&ft)
+  endif
+  call ReadFile('common')
+endf
+
+fun! ReadFile(filetype)
+  for RegImapsFile in split(globpath(g:RegImap_baseDir, 'RegImap/' . a:filetype . '.vim'))
+    if !has_key(s:sourcedFiles, RegImapsFile) && filereadable(RegImapsFile) " If file was not sourced yet
+      let s:sourcedFiles[RegImapsFile] = 1
+      exec 'source ' . RegImapsFile
+    endif
   endfor
 endf
+
+fun! ReloadRegImaps()
+  let s:regImaps = {}
+  for RegImapsFile in keys(s:sourcedFiles)
+    if (filereadable(RegImapsFile))
+      exec 'source ' . RegImapsFile
+    endif
+  endfor
+endf
+
 
 function! SelectPH()
   if search(g:isPH, 'w') " PlaseHolder found
@@ -180,14 +207,15 @@ endfunction
 
 
 function! NextPH(...)
-"      return ''
+  " Use tab for autocomplete?
   if pumvisible()
     return "\<C-y>"
   endif
+  
   if search(g:isPH, 'cw') " PlaseHolder found
     let save_cursor = getpos(".")
     let width = searchpos('+>', 'en')[1] - save_cursor[2]
-  
+    
     s/\%#<[+]\(.\{-}\)+>/\1/
     call setpos('.', save_cursor)
     
@@ -207,26 +235,26 @@ endfunction
 
 fun! TriggerRegImap(...)
   for ft in split(&ft, '\.') + ['common']
-    if exists('s:RegImaps["'.ft.'"]')
-      for RegImap in s:RegImaps[ft]
-        if RegImap.singleLine
+    if exists('s:regImaps["'.ft.'"]')
+      for mapping in s:regImaps[ft]
+        if mapping.singleLine
           let lineNum = line('.')
-          if (RegImap.condition == '' || search(RegImap.condition, 'cnb', lineNum)) && search(RegImap.pattern, 'cnb', lineNum)
-            exec 'normal! :s/' . RegImap.pattern . '/' . RegImap.substitute . "\<CR>"
+          if (mapping.condition == '' || search(mapping.condition, 'cnb', lineNum)) && search(mapping.pattern, 'cnb', lineNum)
+            exec 'normal! :s/' . mapping.pattern . '/' . mapping.substitute . "\<CR>"
             " Put  defined in RegImap back
             s/?[c]r?//ge
             call setpos('.', [bufnr("%"), lineNum, 0, 0])
-            call NextPH(RegImap.feedkeys)
+            call NextPH(mapping.feedkeys)
             return ''
           endif
         else
           let lineNum = line('.')
-          if (RegImap.condition == '' || search(RegImap.condition, 'cnb')) && search(RegImap.pattern, 'cnb')
-            exec 'normal! :%s/' . RegImap.pattern . '/' . RegImap.substitute . "\<CR>"
+          if (mapping.condition == '' || search(mapping.condition, 'cnb')) && search(mapping.pattern, 'cnb')
+            exec 'normal! :%s/' . mapping.pattern . '/' . mapping.substitute . "\<CR>"
             " Put  defined in RegImap back
             %s/?[c]r?//ge
             call setpos('.', [bufnr("%"), lineNum, 0, 0])
-            call NextPH(RegImap.feedkeys)
+            call NextPH(mapping.feedkeys)
             return ''
           endif
         endif
@@ -239,12 +267,13 @@ endfun
 " For debug
 fun! PrintRegImaps()
   for ft in split(&ft, '\.') + ['common']
-    if exists('s:RegImaps["'.ft.'"]')
+    if exists('s:regImaps["'.ft.'"]')
       exec 'normal! o' . ft
-      for RegImap in s:RegImaps[ft]
-        exec 'normal! o' . RegImap.pattern . ' -> ' . RegImap.substitute . ' / ' . RegImap.condition . ' / ' . RegImap.feedkeys
+      for mapping in s:regImaps[ft]
+        exec 'normal! o' . mapping.pattern . ' -> ' 
+              \. mapping.substitute . ' / ' 
+              \. mapping.condition . ' / ' . mapping.feedkeys
       endfor
     endif
   endfor
 endfun
-
