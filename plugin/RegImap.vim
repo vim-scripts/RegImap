@@ -14,9 +14,16 @@ endif
 
 let RegImap_inited = 1
 
-autocmd CursorMovedI * call TriggerRegImap()
+if v:version > 703 || v:version == 703 && has("patch196")
+  autocmd CursorMovedI * call TriggerRegImap()
+  autocmd InsertCharPre * let s:useTrigger = 1
+else
+  autocmd CursorMovedI * let s:useTrigger = 1 | call TriggerRegImap()
+endif
+
 autocmd BufEnter * call ReadRegImaps()
 autocmd FileType * call ReadRegImaps()
+
 
 if !exists("g:RegImap_baseDir")
   let g:RegImap_baseDir = &runtimepath
@@ -38,9 +45,22 @@ if !exists("g:RegImap_clearSelectedText")
   let g:RegImap_clearSelectedText = '<C-j>'
 endif
 
+let g:whiteStart='^\(\s*\)\zs'
+let g:cursor = '\' . '%#'
+let g:isPH = '<' . '+.*+>'
+let g:isAutoPH = '<' . '+|.*|+>'
+
+let g:notDQ = '\%(\\\\\|\\[^\\]\|[^\"]\)'
+let g:DQstr = '"' . notDQ . '*"'
+let g:notSQ = "[^']"
+let g:SQstr = "'" . notSQ . "*'"
+let g:notSQDQ = "[^\"']"
+let g:closedQuotedText = '\%(' . notSQDQ . '*\%(' . SQstr . '\|' . DQstr . '\)\)*' . notSQDQ . '*'
+
+
 if g:RegImap_useNextPH != ''
   exec 'inoremap ' . g:RegImap_useNextPH . ' <C-r>=NextPH()'
-  exec 'nnoremap ' . g:RegImap_useNextPH . ' a<C-r>=NextPH("") . Escape()'
+  exec 'nnoremap ' . g:RegImap_useNextPH . ' a<C-r>=NextPH("", escape)'
   exec 'snoremap ' . g:RegImap_useNextPH . ' <Esc>a<C-r>=CheckSelected()'
 endif
 
@@ -58,73 +78,31 @@ if g:RegImap_clearSelectedText != ''
   exec 'snoremap ' . g:RegImap_clearSelectedText . ' i<BS><C-r>=ClearSelection()'
 endif
 
-function! Escape()
-  return "\<Esc>"
-endfunction
 
-function! ClearSelection()
-  let save_cursor = getpos(".")
-  if search('^\s*\n', 'bc', line('.'))
-    call cursor(line('.'), save_cursor[2])
-    return "\<Esc>dd"
-  endif
-  return ''
-endfunction
-
-function! CheckSelected()
-  if search(g:isPH . g:cursor, 'bce')
-    let save_cursor = getpos(".")
-    s/<[+]\(.\{-}\)+\%#>/\1/
-    call cursor(line('.'), save_cursor[2]-3)
-    return TriggerRegImap(1)
-  endif
-  return "\<Esc>a"
-endfunction
+let escape = "\<Esc>" 
+let s:useTrigger = 0
+let s:defaults = {
+      \'filetype' : 'common',
+      \'condition' : '',
+      \'feedkeys' : '',
+      \}
 
 
-let whiteStart='^\(\s*\)\zs'
-let cursor = '\' . '%#'
-let isPH = '<' . '+.*+>'
-let isAutoPH = '<' . '+|.*|+>'
+let s:parameters = s:defaults
+let s:sourcedFiles = {}
+let s:regImaps = {}
 
-let notDQ = '\%(\\\\\|\\[^\\]\|[^\"]\)'
-let DQstr = '"' . notDQ . '*"'
-let notSQ = "[^']"
-let SQstr = "'" . notSQ . "*'"
-let notSQDQ = "[^\"']"
-let closedQuotedText = '\%(' . notSQDQ . '*\%(' . SQstr . '\|' . DQstr . '\)\)*' . notSQDQ . '*'
 
 fun! PH(...)
   return '<' . '+' . join(a:000) . '+>'
 endfun
 
-let defaults = {
-      \'filetype' : 'common',
-      \'condition' : '',
-      \'feedkeys' : '',
-      \}
-      
-let parameters = defaults
-let s:sourcedFiles = {}
-let s:regImaps = {}
-
 function! SetParameters(...)
   if a:0 == 0
-    let g:parameters = g:defaults
+    let s:parameters = s:defaults
   else
-    call extend(g:parameters, a:1)
+    call extend(s:parameters, a:1)
   endif
-endfunction
-
-function! GetParameters(input)
-  let parameters = extend(copy(g:parameters), a:input)
-  if parameters.condition !~ g:cursor
-    let parameters.condition = '\%(' . parameters.condition . '\)\%#'
-  endif
-  if parameters.filetype == ''
-    let parameters.filetype = 'common'
-  endif
-  return parameters
 endfunction
 
 fun! RegImap(pattern, substitute, ...)
@@ -138,7 +116,6 @@ fun! RegImap(pattern, substitute, ...)
   else
     let pattern = a:pattern
   endif
-  
   " Replace  by special string
   let substitute = substitute(a:substitute, '', '?c' . 'r?', 'g')
   if (substitute[0:1] != '\=') && substitute !~ g:isPH
@@ -148,7 +125,7 @@ fun! RegImap(pattern, substitute, ...)
   if a:0 > 0
     let parameters = GetParameters(a:1)
   else
-    let parameters = g:parameters
+    let parameters = s:parameters
   endif
   
   for ft in split(parameters.filetype, '\.')
@@ -171,6 +148,47 @@ fun! RegImap(pattern, substitute, ...)
   endfor
 endfun
 
+fun! ReloadRegImaps()
+  let s:regImaps = {}
+  for RegImapsFile in keys(s:sourcedFiles)
+    if (filereadable(RegImapsFile))
+      exec 'source ' . RegImapsFile
+    endif
+  endfor
+endf
+
+function! ClearSelection()
+  let save_cursor = getpos(".")
+  if search('^\s*\n', 'bc', line('.'))
+    call cursor(line('.'), save_cursor[2])
+    return "\<Esc>dd"
+  endif
+  return ''
+endfunction
+
+function! CheckSelected()
+  if search(g:isPH . g:cursor, 'bce')
+    let save_cursor = getpos(".")
+    s/<[+]\(.\{-}\)+\%#>/\1/
+    call cursor(line('.'), save_cursor[2]-3)
+    return TriggerRegImap(1)
+  endif
+  let s:useTrigger = 1
+  return "\<Esc>a"
+endfunction
+
+
+function! GetParameters(input)
+  let parameters = extend(copy(s:parameters), a:input)
+  if parameters.condition !~ g:cursor
+    let parameters.condition = '\%(' . parameters.condition . '\)\%#'
+  endif
+  if parameters.filetype == ''
+    let parameters.filetype = 'common'
+  endif
+  return parameters
+endfunction
+
 fun! ReadRegImaps()
   if &ft != ''
     call ReadFile(&ft)
@@ -179,18 +197,9 @@ fun! ReadRegImaps()
 endf
 
 fun! ReadFile(filetype)
-  for RegImapsFile in split(globpath(g:RegImap_baseDir, 'RegImap/' . a:filetype . '.vim'))
+  for RegImapsFile in split(globpath(g:RegImap_baseDir, 'RegImap/' . a:filetype . '.vim')) + split(globpath(g:RegImap_baseDir, 'MyRegImap/' . a:filetype . '.vim'))
     if !has_key(s:sourcedFiles, RegImapsFile) && filereadable(RegImapsFile) " If file was not sourced yet
       let s:sourcedFiles[RegImapsFile] = 1
-      exec 'source ' . RegImapsFile
-    endif
-  endfor
-endf
-
-fun! ReloadRegImaps()
-  let s:regImaps = {}
-  for RegImapsFile in keys(s:sourcedFiles)
-    if (filereadable(RegImapsFile))
       exec 'source ' . RegImapsFile
     endif
   endfor
@@ -229,17 +238,26 @@ function! NextPH(...)
     if a:0 > 0
       call feedkeys(a:1)
     endif
+  else
+    if a:0 > 1
+      call feedkeys(a:2)
+    endif
   endif
   return ''
 endfunction
 
 fun! TriggerRegImap(...)
+  if !s:useTrigger
+    return ''
+  endif
+  let s:useTrigger = 0
   for ft in split(&ft, '\.') + ['common']
     if exists('s:regImaps["'.ft.'"]')
       for mapping in s:regImaps[ft]
         if mapping.singleLine
           let lineNum = line('.')
           if (mapping.condition == '' || search(mapping.condition, 'cnb', lineNum)) && search(mapping.pattern, 'cnb', lineNum)
+"            call feedkeys("<C-g>u")
             exec 'normal! :s/' . mapping.pattern . '/' . mapping.substitute . "\<CR>"
             " Put  defined in RegImap back
             s/?[c]r?//ge

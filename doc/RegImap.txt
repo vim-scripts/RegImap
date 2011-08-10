@@ -236,25 +236,21 @@ This is much more useful than <Esc> of <C-[>.
  | let a = |     |  '  | let a = '|'         |                               |
  | call cursor   |  '  | call cursor(|)      | after character you bet braces|
  | '^\s*' . p|   |  h  | '^\s*' . PH(|)      |                               |
- | i|            |  f  | if |                | at the empty line             |
+ | if|           |space| if |                | at the empty line             |
  |               |     |                     |                               |
  |               |     | endif               |                               |
  | if a:0 > 0|   |<tab>| if a:0 > 0          |                               |
  |   <++>        |     |   |                 |                               |
  | endif         |     | endif               |                               |
- | fo|           |  r  | for | in <++>       | at the empty line             |
+ | for|          |space| for | in <++>       | at the empty line             |
  |               |     |   <++>              |                               |
  |               |     | endfor              |                               |
  | let v = [|]   |   | let v = [           |                               |
  |               |     |        \|           |                               |
  |               |     |        \]           |                               |
- | imap cl|      |space| imap <C-l>|         | any character instead of l    |
- | imap <C-l> r| |space| imap <C-l> <Right>| | also available <BS> <Down>    |
- | imap f5|      |space| imap <F5>|          | <Esc> <Left> <Right> <Space>  |
- |               |     |                     | <Tab> <Up>                    |
  | r|            |space| call RegImap('|',   | at the start of the line      |
- |               |     |    '<++>', '<++>')  |                               |
- | r|            |space| return |            | inside function               |
+ |               |     |    '<++>''<+,+>')   |                               |
+ | r|            |space| return |            | after several spaces          |
  | if a ma|      |space| if a =~ |           | also available nm eq ne le ge |
  | get           |  l  | getline(|)          |                               |
  | getline(|)    |  l  | getline(line('.'))  |                               |
@@ -294,8 +290,7 @@ If you are not inside string by typing semicolon you will exit insert mode.
 
 CPP                                                            *RegImap-cpp*
 
-By typing semicolon you will exit insert mode. If you are at the end of
-line semicolon is left in the text.
+By typing semicolon at the end of line you will exit insert mode. 
 
 >
  -----------------------------------------------------------------------------
@@ -344,6 +339,10 @@ or send at my email: artshcherbina <at> gmail <dot> com
 
 ==============================================================================
 CHANGELOG                                                *RegImap-changelog*
+
+0.53
+ - Added use of InsertCharPre autocommand if you have patch196
+ - Refactored code, fixed small bugs
 
 0.52
  - Fixed sourcing algorithm (thanks to Alexey Radkov)
