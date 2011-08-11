@@ -24,6 +24,8 @@ endif
 autocmd BufEnter * call ReadRegImaps()
 autocmd FileType * call ReadRegImaps()
 
+highlight PlaceHolder ctermbg=0 ctermfg=4 guifg=#4CFF4C guibg=#3A3A3A
+call matchadd('PlaceHolder', '<' . '+.\{-}+>')
 
 if !exists("g:RegImap_baseDir")
   let g:RegImap_baseDir = &runtimepath
@@ -48,7 +50,7 @@ endif
 let g:whiteStart='^\(\s*\)\zs'
 let g:cursor = '\' . '%#'
 let g:isPH = '<' . '+.*+>'
-let g:isAutoPH = '<' . '+|.*|+>'
+let g:isCursorPH = '<' . '+@.*@+>'
 
 let g:notDQ = '\%(\\\\\|\\[^\\]\|[^\"]\)'
 let g:DQstr = '"' . notDQ . '*"'
@@ -97,6 +99,14 @@ fun! PH(...)
   return '<' . '+' . join(a:000) . '+>'
 endfun
 
+fun! CursorPH(...)
+  return '<' . '+@' . join(a:000) . '@+>'
+endfun
+
+"fun! NotInString(...)
+"  return '^' . g:closedQuotedText . '\zs' . join(a:000) . '\ze' . g:closedQuotedText . '$'
+"endfun
+
 function! SetParameters(...)
   if a:0 == 0
     let s:parameters = s:defaults
@@ -118,8 +128,16 @@ fun! RegImap(pattern, substitute, ...)
   endif
   " Replace  by special string
   let substitute = substitute(a:substitute, '', '?c' . 'r?', 'g')
+  if (substitute[0:1] == '\=') && substitute !~ g:isPH
+    let substitute .= '."' . PH() . '"'
+  endif
+  
   if (substitute[0:1] != '\=') && substitute !~ g:isPH
     let substitute .= PH()
+  endif
+  
+  if substitute !~ g:isCursorPH
+    let substitute = substitute(substitute, '<' . '+\zs.\{-}\ze+>', '@&@', '')
   endif
   
   if a:0 > 0
@@ -158,16 +176,11 @@ fun! ReloadRegImaps()
 endf
 
 function! ClearSelection()
-  let save_cursor = getpos(".")
-  if search('^\s*\n', 'bc', line('.'))
-    call cursor(line('.'), save_cursor[2])
-    return "\<Esc>dd"
-  endif
-  return ''
+  return (search('^\s*\n', 'nbc', line('.')) ? "\<Esc>dd" : '') . "a\<C-R>=NextPH()\<CR>"
 endfunction
 
 function! CheckSelected()
-  if search(g:isPH . g:cursor, 'bce')
+  if search('<' . g:cursor . '+.*+>', 'bce')
     let save_cursor = getpos(".")
     s/<[+]\(.\{-}\)+\%#>/\1/
     call cursor(line('.'), save_cursor[2]-3)
@@ -207,7 +220,7 @@ endf
 
 
 function! SelectPH()
-  if search(g:isPH, 'w') " PlaseHolder found
+  if search(g:isPH, 'w') " PlaceHolder found
     let save_cursor = getpos(".")
     let width = searchpos('+>', 'en')[1] - save_cursor[2]
     call feedkeys("\<Esc>v" . (width) . "lo\<C-g>", 'n')
@@ -221,18 +234,24 @@ function! NextPH(...)
     return "\<C-y>"
   endif
   
-  if search(g:isPH, 'cw') " PlaseHolder found
+  if search(g:isCursorPH, 'cw') || search(g:isPH, 'cw') " PlaceHolder found
     let save_cursor = getpos(".")
-    let width = searchpos('+>', 'en')[1] - save_cursor[2]
     
-    s/\%#<[+]\(.\{-}\)+>/\1/
+    if search('\%#' . g:isCursorPH, 'cw')
+      let width = searchpos('+>', 'en')[1] - save_cursor[2] - 2
+      s/\%#<[+]@\(.\{-}\)@+>/\1/
+    else
+      let width = searchpos('+>', 'en')[1] - save_cursor[2]
+      s/\%#<[+]\(.\{-}\)+>/\1/
+    endif
+    
     call setpos('.', save_cursor)
     
     if width > 4
-      " PlaseHolder with text
+      " PlaceHolder with text
       call feedkeys("\<Esc>lv" . (width-4) . "l\<C-g>", 'n')
     elseif width == 4
-      " PlaseHolder with one char
+      " PlaceHolder with one char
       call feedkeys("\<Esc>lv\<C-g>", 'n')
     endif
     if a:0 > 0
@@ -251,29 +270,22 @@ fun! TriggerRegImap(...)
     return ''
   endif
   let s:useTrigger = 0
+  let lineNum = line('.')
   for ft in split(&ft, '\.') + ['common']
     if exists('s:regImaps["'.ft.'"]')
       for mapping in s:regImaps[ft]
         if mapping.singleLine
-          let lineNum = line('.')
           if (mapping.condition == '' || search(mapping.condition, 'cnb', lineNum)) && search(mapping.pattern, 'cnb', lineNum)
 "            call feedkeys("<C-g>u")
             exec 'normal! :s/' . mapping.pattern . '/' . mapping.substitute . "\<CR>"
-            " Put  defined in RegImap back
-            s/?[c]r?//ge
-            call setpos('.', [bufnr("%"), lineNum, 0, 0])
-            call NextPH(mapping.feedkeys)
-            return ''
+            s/?[c]r?//ge " Put  defined in RegImap back
+            return NextPH(mapping.feedkeys)
           endif
         else
-          let lineNum = line('.')
           if (mapping.condition == '' || search(mapping.condition, 'cnb')) && search(mapping.pattern, 'cnb')
             exec 'normal! :%s/' . mapping.pattern . '/' . mapping.substitute . "\<CR>"
-            " Put  defined in RegImap back
-            %s/?[c]r?//ge
-            call setpos('.', [bufnr("%"), lineNum, 0, 0])
-            call NextPH(mapping.feedkeys)
-            return ''
+            %s/?[c]r?//ge " Put  defined in RegImap back
+            return NextPH(mapping.feedkeys)
           endif
         endif
       endfor

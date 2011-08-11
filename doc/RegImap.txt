@@ -20,6 +20,10 @@ This plugin only works if 'compatible' is not set.
 ==============================================================================
 USAGE                                                         *RegImap-usage*
 
+Note If you want to improve performance of this plugin then update to vim
+version 7.3 with patch 196, for example from here
+http://www.vim.org/mercurial.php
+
 RegImap plugin allows you to type text more efficiently by defining your
 mappings, that will be used, while you typing text. For example, in vim you
 often type nnoremap. To speed up this job, you can define the following
@@ -120,10 +124,16 @@ With this function you can change default values of {parameters}, specified in
 defaults.
 
 
-PH([{string}])                           *PlaceHolder*   *RegImap-PlaceHolders*
+PH([{string}])                                     *PlaceHolder*   *RegImap-PH*
 
-Return a Placeholder with possible default value after placeholder selection.
-Basically for {substitute} fields.
+Return a Placeholder with possible default value. Basically for {substitute}
+fields.
+
+
+CursorPH([{string}])                                       *RegImap-CursorPH*
+
+Same as |PH|, but it is selected before other Placeholders.
+
 
 
 ReadRegImaps()                                         *RegImap-ReadRegImaps*
@@ -209,7 +219,7 @@ Key to exit from select mode to normal mode. Selected text is left unchanged.
 <
 
 Key to clear selected text and go to insert mode. If it results in empty
-string, it is deleted.
+string, it is deleted. Then move to next |PlaceHolder| if possible.
 
 
 ==============================================================================
@@ -223,7 +233,6 @@ position is indicated by | character.
 VIM                                                             *RegImap-vim*
 
 If you are not inside string by typing semicolon you will exit insert mode.
-This is much more useful than <Esc> of <C-[>.
 
 >
  -----------------------------------------------------------------------------
@@ -260,7 +269,7 @@ This is much more useful than <Esc> of <C-[>.
 
 TEX                                                            *RegImap-tex*
 
-If you are not inside string by typing semicolon you will exit insert mode.
+By typing semicolon you will exit insert mode.
 
 >
  -----------------------------------------------------------------------------
@@ -284,13 +293,14 @@ If you are not inside string by typing semicolon you will exit insert mode.
  | i             |space| \item |             | at the start of the line      |
  | ith           |space| $i$--th |           |                               |
  | jth           |space| $j$--th |           |                               |
+ | text |        |  '  | text $|$<++>        | in text replaced to inline    |
+ |               |     |                     | equation                      |
+ | $f|$          |  '  | $f(|)<++>$          | in math replaced to braces    |
  -----------------------------------------------------------------------------
 <
 
 
 CPP                                                            *RegImap-cpp*
-
-By typing semicolon at the end of line you will exit insert mode. 
 
 >
  -----------------------------------------------------------------------------
@@ -340,6 +350,11 @@ or send at my email: artshcherbina <at> gmail <dot> com
 ==============================================================================
 CHANGELOG                                                *RegImap-changelog*
 
+0.54
+ - Added PlaceHolder highlighting
+ - Added CursorPH
+ - Fixed small bugs
+
 0.53
  - Added use of InsertCharPre autocommand if you have patch196
  - Refactored code, fixed small bugs
@@ -348,7 +363,7 @@ CHANGELOG                                                *RegImap-changelog*
  - Fixed sourcing algorithm (thanks to Alexey Radkov)
  - Added ReloadRegImaps function
  - Added g:RegImap_ to settings names
- - updated help
+ - Updated help
 
 0.51
  - Fixed path detection 

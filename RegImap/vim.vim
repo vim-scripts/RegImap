@@ -6,11 +6,11 @@ call RegImap('^' . closedQuotedText . '[[]\zs' . cursor . '\ze\([]]\@!.\)*$', PH
 call RegImap('^' . closedQuotedText . '{\zs' . cursor . '\ze[^}]*$', PH() . '}')
 
 let whiteStartCommands = [
-      \['\sr ', 'return '],
+      \['\s\zsr ', 'return '],
       \['if ', 'if ' . PH() . '\1  ' . PH() . '\1endif'],
-      \['  el', 'else\1  ' . PH()],
-      \['for \zs', PH('key') . ' in ' . PH() . '\1  ' . PH() . '\1endfor'],
-      \['e ', "exec '" . PH('normal! ') . "' . " . PH(), 'e'],
+      \['  e ', 'else\1  ' . PH()],
+      \['for \zs', PH('key') . ' in ' . CursorPH('list') . '\1  ' . PH() . '\1endfor'],
+      \['ex ', "exec '" . PH('normal! ') . "' . " . PH(), 'e'],
       \['.*[[]\s*\n\zs' . cursor . '\ze[]]', '\1      \\' . PH() . '\1      \\'],
       \]
 
@@ -53,7 +53,7 @@ let spaceCommands = [
       \]
       
 for key in spaceCommands
-  call RegImap('\<' . key[0] . ' ', key[1] . ' ')
+  call RegImap('^' . closedQuotedText . '\zs\<' . key[0] . ' ', key[1] . ' ')
 endfor
 
 call RegImap('\<ph ', 'PH(' . PH() . ')' . PH())
@@ -61,7 +61,6 @@ call RegImap('\<ph ', 'PH(' . PH() . ')' . PH())
 let functions = [
       \['getl', 'getline(' . PH() . ')'],
       \['getline(l\zs' . cursor . '\ze)', "ine('" . PH('.') . "')"],
-      \['fee', 'feedkeys' . PH()],
       \]
      
 for key in functions

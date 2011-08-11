@@ -1,5 +1,6 @@
 call SetParameters({'filetype' : 'cpp'})
 
+
 call RegImap(whiteStart . '\zssw ', 'switch(' . PH() . ')\1{\1    ' . PH("case ") . '\1    ' . PH("default: ") . '\1}')
 call RegImap(whiteStart . 'case \zs', PH("value") . ': ' . PH("code") . '; ' . PH('break;') . '\1' . PH("case "))
 
@@ -17,13 +18,15 @@ let whiteStartCommands = [
       \['b ',  'bool '],
       \['v ',  'void '],
       \['ci ', 'const int '],
+      \['for ', 'for(int ' . PH() . ' = 0; \2 < ' . PH() . '; \2++)\1    ' . PH()],
       \['const\s*\(int\|double\)\s*\(\w*\)\zs\w', '\U&'],
-      \['\zs\(\w*\)\s*for ', 'for(int \2 = 0; \2 < ' . PH() . '; \2++)\1    ' . PH()],
       \]                
 
 for key in whiteStartCommands
   call RegImap(whiteStart . key[0], key[1])
 endfor
+  
+call RegImap(whiteStart . 'for\s*(.\{-}\s\(\k\+' . cursor . '\k*\)\zs\(\s*=.\{-};\s\{-}\)\s\k*\(.*;\s*\)\k*\ze.*)', CursorPH() . '\3 \2\4\2')
 
 let spaceCommands = [
       \['ma', '=\~'],
